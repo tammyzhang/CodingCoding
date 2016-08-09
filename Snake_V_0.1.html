@@ -88,10 +88,10 @@ if (document.all) {
 function NewGame()
 {
 	document.onkeydown = KeyPress; // mornitor the key event of user
-    if(int>0)// if the setInterval functions are running, clear it.
-    {
-    	window.clearInterval(int); 
-    }    
+    	if(int>0)// if the setInterval functions are running, clear it.
+    	{
+    		window.clearInterval(int); 
+    	}    
 	initializeParameters();
 	initializePanelArray();
 	randomAfood();
@@ -176,15 +176,15 @@ function initalizeSnakeArray()
 	snakeArray.push(1);
 	snakeArray.push(1);
 	
-    panelArray[1][1]=3;
-    drawAcell(1,1,"SnakeHead");
+    	panelArray[1][1]=3;
+    	drawAcell(1,1,"SnakeHead");
 }
 
 // handle the snake move
 function snakeMove()
 {
-	headX=snakeArray[snakeArray.length-2];
-	headY=snakeArray[snakeArray.length-1];
+    headX=snakeArray[snakeArray.length-2];
+    headY=snakeArray[snakeArray.length-1];
     var nextX=headX;
     var nextY=headY;
     // for canvas, the (0,0) starts from the leftup corner
