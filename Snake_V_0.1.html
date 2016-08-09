@@ -1,0 +1,334 @@
+<!DOCTYPE HTML> 
+<html>
+<head>
+<!--[if IE]>
+<p id="tips">Your Browser is IE, please wait a few seconds to download some necessary files.</p> 
+<script src="https://github.com/aFarkas/html5shiv/blob/master/src/html5shiv.js"></script>
+<script type="text/javascript">
+	document.getElementById("tips").innerHTML="";
+</script> 
+<![endif]--> 
+</head> 
+
+<body>
+<div>
+	<canvas id="myCanvas" width="120" height="120" style="float: left"></canvas>
+	<div style="float:left; padding-left: 30px">
+		<p>Score:
+		<span id="scoreTxt">0</span>
+		</p>
+		<p>Speed:
+		<span id="speedTxt">Level 1</span>
+		</p>
+		<p>TotalFood:
+		<span id="totalFoodTxt">0</span>
+		</p>
+		<input type="button" value="Start Game" onclick="NewGame();"></input>
+	</div> 
+</div>
+
+<script type="text/javascript">
+var score;  // score
+var speed;  // speed
+var speedLevel; // speed level from 1 to N
+var totalFood;  // total food you have had
+var tempFood;   // tempFood number for calculate speed level
+var snakeArray; // 2 Dimension array to store snake
+var panelArray; // 2 Dimension array to store overall panel
+var foodX;      // food X position
+var foodY;      // food Y position
+var direction; // snake direction
+var int; // used for setInterval function return 
+
+// parameters related with canvas
+var size=10;    //  a grid cell size in canvas
+var num=30;     //  row and column number of grid
+var margin=0.5; //  the margin between two cells
+var maxWidth=num*(size+margin); // calculate the maxWidth of canvas
+var maxHeight=num*(size+margin); // calculate the maxHeight of canvas
+
+var myCan = document.getElementById("myCanvas"); // get the canvas by Id
+myCan.width=maxWidth; // set the canvas width
+myCan.height=maxHeight; // set the canvas height
+var ctx = myCan.getContext("2d"); // get the content of canvas
+
+// Handle IE compatibility issues
+var ie4;
+var firefox;
+if (document.all) ie4 = true; else ie4 = false; //check the IE version
+
+function drawBeauty(beauty){
+	var mycv = document.getElementById("myCanvas");  
+	var myctx = mycv.getContext("2d");
+	myctx.drawImage(beauty, 0, 0,maxWidth,maxHeight);
+}
+
+function load(){
+	var beauty = new Image();  
+	beauty.src = "http://img.lenovomm.com/crawler@cluster-1/ams/fileman/img/icon/2013-01-20094926-_1358689766057_3693.png";
+	if(beauty.complete){
+   		drawBeauty(beauty);
+	}else{
+   		beauty.onload = function(){
+     		drawBeauty(beauty);
+   		};
+   		beauty.onerror = function(){
+    		window.alert('美女加载失败，请重试');
+   		};
+	};   
+}//load
+
+if (document.all) {
+  window.attachEvent('onload', load);  
+  }else {  
+  window.addEventListener('load', load, false);
+}
+
+// start a new game
+function NewGame()
+{
+	document.onkeydown = KeyPress; // mornitor the key event of user
+    	if(int>0)// if the setInterval functions are running, clear it.
+    	{
+    		window.clearInterval(int); 
+    	}    
+	initializeParameters();
+	initializePanelArray();
+	randomAfood();
+	initalizeSnakeArray();    
+	int=self.setInterval("snakeMove()",500);	
+}
+
+// initialize some parameters
+function initializeParameters()
+{
+	score=0;
+	speed=1;
+	totalFood=0;
+	tempFood=0;
+	direction="right";
+
+	setScore(0);
+	setSpeed(0);
+	setTotalFood(0);
+}
+
+// set the score
+function setScore(flag)
+{	
+	score = score + speed*flag*10;
+	document.getElementById("scoreTxt").innerHTML = score;	
+}
+
+// set the speed
+function setSpeed(flag)
+{
+	if(flag===1)
+		tempFood++;
+	if(tempFood===5)
+	{
+		speed=speed+1;
+		tempFood=0;	
+		window.clearInterval(int);
+		int = setInterval(snakeMove,500/speed);
+	}
+	document.getElementById("speedTxt").innerHTML = "Level "+speed;	
+}
+
+// set the total food number
+function setTotalFood(flag)
+{	
+	if(flag===1)
+		totalFood++;
+	document.getElementById("totalFoodTxt").innerHTML = totalFood;	
+}
+
+// initialize the panel 
+function initializePanelArray(){
+	ctx.fillStyle = "white";
+	ctx.fillRect(0,0,maxWidth,maxHeight);
+
+	panelArray= new Array();
+	for(i=0;i<num;i++)
+	{
+		panelArray[i]=new Array();
+		for(j=0;j<num;j++)
+		{
+			if(i===0||j===0||i===num-1||j===num-1)
+			{
+				panelArray[i][j]=1;
+				drawAcell(i,j,"Wall");
+			}
+			else
+			{
+				panelArray[i][j]=0;
+				drawAcell(i,j,"Blank");
+			}
+		}
+	}
+}
+
+
+//initialize the snake
+function initalizeSnakeArray()
+{
+	snakeArray=[];
+	snakeArray.push(1);
+	snakeArray.push(1);
+	
+    	panelArray[1][1]=3;
+    	drawAcell(1,1,"SnakeHead");
+}
+
+// handle the snake move
+function snakeMove()
+{
+    headX=snakeArray[snakeArray.length-2];
+    headY=snakeArray[snakeArray.length-1];
+    var nextX=headX;
+    var nextY=headY;
+    // for canvas, the (0,0) starts from the leftup corner
+    switch(direction)
+    {
+    	case "left":nextX=headX-1;break; // if snake moves left, X minus 1
+    	case "right":nextX=headX+1;break; // if snake moves right, X plus 1
+    	case "up":nextY=headY-1; break;  // if snake moves up, Y minus 1
+    	case "down":nextY=headY+1;break; // if snake moves down, Y plus 1
+    }
+	conflictDetect(nextX,nextY);  // you should check if there any conflict for moving forward
+}
+
+function KeyPress(){
+    var key;
+    if (ie4) key = event.keyCode; 
+    //for Ie4, it uses vent.keyCode
+    else 
+       key = KeyPress.arguments[0].keyCode; 
+    //For FireFox, it uses arguments[0].keyCode
+   
+    keyPressToDirectionMapping(key);
+}
+
+// Key and direction mapping
+// 37,38,39,40 presents the arrows left, up, right and down
+function keyPressToDirectionMapping(key)
+{
+	switch(key)
+	{
+		case 37: direction="left";break;
+		case 38: direction="up";break;
+		case 39: direction ="right";break;
+		case 40: direction="down";break;
+	}
+}
+
+// detect if there is any conflict during movement
+function conflictDetect(nextX,nextY)
+{
+	switch(panelArray[nextX][nextY])
+	{
+		case 0:
+		{
+			tailX=snakeArray.shift();  // shift index values in index 0 and 1 from tail 
+			tailY=snakeArray.shift();
+			panelArray[tailX][tailY]=0;  //reset the panel to blank
+			drawAcell(tailX,tailY,"Blank");
+
+			snakeArray.push(nextX);   // push the next position to head 
+			snakeArray.push(nextY);
+			panelArray[nextX][nextY]=3;
+			drawAcell(nextX,nextY,"SnakeBody");
+		}
+		break;
+		case 1:
+		{
+			alert("You hit the wall! Game over! SCORE:"+score);
+			window.clearInterval(int);
+			return true;
+		}
+		break;
+		case 2:
+		{
+			snakeArray.push(nextX);
+			snakeArray.push(nextY);
+			panelArray[nextX][nextY]=3;
+			drawAcell(nextX,nextY,"SnakeBody");
+			setScore(1);
+			setSpeed(1);
+			setTotalFood(1);
+			randomAfood();
+		}
+		break;
+		case 3:
+		{
+			alert("You hit your self.Game Over!SCORE:"+score);
+			window.clearInterval(int);
+			return true;
+		}
+		break;
+	} 
+}
+
+// random a food for snake
+function randomAfood()
+{
+	while(true)
+	{
+		foodX=Math.floor(Math.random()*(num-2)); // random food position
+		foodY=Math.floor(Math.random()*(num-2));
+		if(panelArray[foodX][foodY]===0) // until find a proper place
+			break;
+	}
+	panelArray[foodX][foodY]=2;
+	//drawAfood(foodX,foodY,"black");
+	drawAcell(foodX,foodY,"Food");
+}
+
+function drawAcell(i,j,type)
+{
+	switch(type)
+	{
+		case "SnakeBody":
+		case "SnakeHead":
+		case "Wall":drawAcubeFill(i,j,"black");break;
+		case "Food":drawAfood(i,j,"black");break;
+		case "Blank":
+		{
+			drawAcubeFill(i,j,"white");
+			drawAcubeStroke(i,j,"white");
+		}break;
+	}
+}
+
+//Set one single cube with red color
+function drawAcubeStroke(i,j, color){
+	ctx.strokeStyle=color;
+	ctx.strokeRect(i*(size+margin),j*(size+margin),size,size);
+}
+
+function drawAcubeFill(i,j,color)
+{
+	ctx.fillStyle=color;
+	ctx.fillRect(i*(size+margin),j*(size+margin),size,size);
+}
+
+function drawAfood(i,j,color)
+{
+	ctx.beginPath();
+    ctx.fillStyle = color;
+    var circle = {
+        x : i*(size+margin)+size/2,    //X of circle center
+        y : j*(size+margin)+size/2,    //Y of circle center
+        r : size/2     //radius
+    };
+    
+    ctx.arc(circle.x, circle.y, circle.r, 0, Math.PI * 2, true);        
+    ctx.fill();
+
+    /*var foodImage=new Image();
+    foodImage.src="./food.png";
+    ctx.drawImage(foodImage,i*(size+margin),j*(size+margin),size,size);*/
+}
+</script> 
+</body> 
+</html> 
